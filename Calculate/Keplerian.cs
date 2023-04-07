@@ -39,9 +39,9 @@
                                oPos.x * (Math.Cos(argumentPeriapsis) * Math.Sin(longitudeAscending) + Math.Sin(argumentPeriapsis) * Math.Cos(inclination) * Math.Cos(longitudeAscending)) + oPos.y * (Math.Cos(argumentPeriapsis) * Math.Cos(inclination) * Math.Cos(longitudeAscending) - Math.Cos(argumentPeriapsis) * Math.Sin(longitudeAscending)),
                                oPos.x * Math.Sin(argumentPeriapsis) * Math.Sin(inclination) + oPos.y * Math.Cos(argumentPeriapsis) * Math.Sin(inclination));
             Vector3D vel = new(oVel.x * (Math.Cos(argumentPeriapsis) * Math.Cos(longitudeAscending) - Math.Sin(argumentPeriapsis) * Math.Cos(inclination) * Math.Sin(longitudeAscending)) - oVel.y * (Math.Sin(argumentPeriapsis) * Math.Cos(longitudeAscending) + Math.Cos(argumentPeriapsis) * Math.Cos(inclination) * Math.Sin(longitudeAscending)),
-                               oVel.x * (Math.Cos(argumentPeriapsis) * Math.Sin(longitudeAscending) + Math.Sin(argumentPeriapsis) * Math.Cos(inclination) * Math.Cos(longitudeAscending)) + oVel.y * (Math.Cos(argumentPeriapsis) * Math.Cos(inclination) * Math.Cos(longitudeAscending) - Math.Cos(argumentPeriapsis) * Math.Sin(longitudeAscending)),
+                               oVel.x * (Math.Cos(argumentPeriapsis) * Math.Sin(longitudeAscending) + Math.Sin(argumentPeriapsis) * Math.Cos(inclination) * Math.Cos(longitudeAscending)) + oVel.y * (Math.Cos(argumentPeriapsis) * Math.Cos(inclination) * Math.Cos(longitudeAscending) - Math.Sin(argumentPeriapsis) * Math.Sin(longitudeAscending)),
                                oVel.x * Math.Sin(argumentPeriapsis) * Math.Sin(inclination) + oVel.y * Math.Cos(argumentPeriapsis) * Math.Sin(inclination));
-        
+
             return (pos, vel);
         }
 

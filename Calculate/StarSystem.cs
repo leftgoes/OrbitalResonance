@@ -1,15 +1,17 @@
-﻿using System.Globalization;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
 namespace OrbitalResonance
 {
     public class StarSystemCartesianData
     {
+        public int steps;
+        public int planetsCount;
         public double[,] star;
-
         public double[,,] planets;
 
         public StarSystemCartesianData(int steps, int planetsCount) {
+            this.steps = steps;
+            this.planetsCount = planetsCount;
             star = new double[steps, 3];
             planets = new double[steps, planetsCount, 3];
         }
@@ -139,16 +141,18 @@ namespace OrbitalResonance
             }
         }
 
-        public void SimulateCartesian(string filename, int steps = 1000, double dt = 86400)
+        public void SimulateCartesian(string filename, int steps = 1000, double dt = 86400, int every = 1)
         {
-            StarSystemCartesianData cData = new(steps, planets.Length);
+            StarSystemCartesianData cData = new(steps / every, planets.Length);
             for (int step = 0; step < steps; step++)
             {
                 NextStep(dt);
-                cData.AddStar(step, mainStar.pos);
+                if (step % every != 0) continue;
+
+                cData.AddStar(step / every, mainStar.pos);
                 
                 for (int i = 0; i < planets.Length; i++)
-                    cData.AddPlanet(step, i, planets[i].pos - mainStar.pos);
+                    cData.AddPlanet(step / every, i, planets[i].pos - mainStar.pos);
             }
 
             string jsonString = JsonConvert.SerializeObject(cData);
