@@ -43,7 +43,7 @@
 
         public static NonAttracting FromKeplerian(Star star, Keplerian keplerian)
         {
-            var cartesian = keplerian.ToCartesian();
+            Body3D cartesian = keplerian.ToCartesian();
             return new(star.pos + cartesian.pos, star.vel + cartesian.vel);
         }
 
@@ -98,8 +98,8 @@
         public static Attracting FromKeplerian(Keplerian keplerian,
                                                double mass)
         {
-            var parameters = keplerian.ToCartesian();
-            return new(mass, parameters.pos, parameters.vel);
+            Body3D cartesian = keplerian.ToCartesian();
+            return new(mass, cartesian.pos, cartesian.vel);
         }
     }
 }

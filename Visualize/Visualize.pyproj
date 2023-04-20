@@ -5,8 +5,7 @@
     <ProjectGuid>abe091b0-2685-4cf1-8e94-da301521fc4e</ProjectGuid>
     <ProjectHome>
     </ProjectHome>
-    <StartupFile>
-    </StartupFile>
+    <StartupFile>cartesian.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -23,8 +22,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="cartesian.py" />
     <Compile Include="camera.py" />
+    <Compile Include="cartesian.py" />
+    <Compile Include="keplerian.py" />
     <Compile Include="vector.py" />
     <Compile Include="imgarr.py" />
     <Compile Include="__init__.py" />

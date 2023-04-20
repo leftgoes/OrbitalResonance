@@ -3,14 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Calculate", "Calculate\Calculate.csproj", "{7276400F-EB5A-4132-878E-65BF4831C5B0}"
-EndProject
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Visualize", "Visualize\Visualize.pyproj", "{ABE091B0-2685-4CF1-8E94-DA301521FC4E}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BD792223-55A0-4BD3-9188-6E2EF0C83725}"
 	ProjectSection(SolutionItems) = preProject
 		main.py = main.py
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Calculate", "calculate\Calculate.csproj", "{B733298D-7C63-490D-8262-20DD531AD713}"
+EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Visualize", "visualize\Visualize.pyproj", "{ABE091B0-2685-4CF1-8E94-DA301521FC4E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,10 +18,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7276400F-EB5A-4132-878E-65BF4831C5B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7276400F-EB5A-4132-878E-65BF4831C5B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7276400F-EB5A-4132-878E-65BF4831C5B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7276400F-EB5A-4132-878E-65BF4831C5B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B733298D-7C63-490D-8262-20DD531AD713}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B733298D-7C63-490D-8262-20DD531AD713}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B733298D-7C63-490D-8262-20DD531AD713}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B733298D-7C63-490D-8262-20DD531AD713}.Release|Any CPU.Build.0 = Release|Any CPU
 		{ABE091B0-2685-4CF1-8E94-DA301521FC4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{ABE091B0-2685-4CF1-8E94-DA301521FC4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection

@@ -1,10 +1,17 @@
 import cv2
 import numpy as np
 
+FloatRange = tuple[float, float]
+
+
+def linmap(x: float, from_range: FloatRange, to_range: FloatRange) -> float:
+    return (x - from_range[0]) / (from_range[1] - from_range[0]) * (to_range[1] - to_range[0]) + to_range[0]
+
 
 def modf(x: float) -> tuple[float, int]:
     x_int = int(x)
     return x - x_int, x_int
+
 
 def fpart(x):
     return x % 1
@@ -49,7 +56,7 @@ class ImgArr():
         self.draw_point(x_int + 1, y_int, x_float * (1 - y_float) * value)
         self.draw_point(x_int + 1, y_int + 1, x_float * y_float * value)
 
-    def draw_line(self, x1: float, y1: float, x2: float, y2: float) -> None:  # https://en.wikipedia.org/wiki/Xiaolin_Wu's_line_algorithm
+    def draw_line(self, x1: float, y1: float, x2: float, y2: float, value: float = 1) -> None:  # https://en.wikipedia.org/wiki/Xiaolin_Wu's_line_algorithm
         steep = abs(y2 - y1) > abs(x2 - x1)
         
         if steep:
@@ -76,27 +83,27 @@ class ImgArr():
         _y2_frac, _y2_int = modf(y2 + gradient * (round(x2) - x2))
         
         if steep:
-            self.draw_point(_y1_int, _x1_int, (1 - _y1_frac) * x_gap1)
-            self.draw_point(_y1_int + 1, _x1_int,  _y1_frac * x_gap1)
+            self.draw_point(_y1_int, _x1_int, (1 - _y1_frac) * x_gap1 * value)
+            self.draw_point(_y1_int + 1, _x1_int,  _y1_frac * x_gap1 * value)
 
-            self.draw_point(_y2_int, _x2_int, (1 - _y2_frac) * x_gap2)
-            self.draw_point(_y2_int + 1, _x2_int,  _y2_frac * x_gap2)
+            self.draw_point(_y2_int, _x2_int, (1 - _y2_frac) * x_gap2 * value)
+            self.draw_point(_y2_int + 1, _x2_int,  _y2_frac * x_gap2 * value)
         else:
-            self.draw_point(_x1_int, _y1_int, (1 - _y1_frac) * x_gap1)
-            self.draw_point(_x1_int, _y1_int + 1, _y1_frac * x_gap1)
+            self.draw_point(_x1_int, _y1_int, (1 - _y1_frac) * x_gap1 * value)
+            self.draw_point(_x1_int, _y1_int + 1, _y1_frac * x_gap1 * value)
 
-            self.draw_point(_x2_int, _y2_int,  (1 - _y2_frac) * x_gap2)
-            self.draw_point(_x2_int, _y2_int + 1, _y2_frac * x_gap2)
+            self.draw_point(_x2_int, _y2_int,  (1 - _y2_frac) * x_gap2 * value)
+            self.draw_point(_x2_int, _y2_int + 1, _y2_frac * x_gap2 * value)
 
         y_intercept = y1 + gradient * (round(x1) - x1 + 1)
         for x in range(_x1_int + 1, _x2_int):
             y_intercept_frac, y_intercept_int = modf(y_intercept)
             if steep:
-                self.draw_point(y_intercept_int, x, 1 - y_intercept_frac)
-                self.draw_point(y_intercept_int + 1, x, y_intercept_frac)
+                self.draw_point(y_intercept_int, x, (1 - y_intercept_frac) * value)
+                self.draw_point(y_intercept_int + 1, x, y_intercept_frac * value)
             else:
-                self.draw_point(x, y_intercept_int, 1 - y_intercept_frac)
-                self.draw_point(x, y_intercept_int + 1, y_intercept_frac)
+                self.draw_point(x, y_intercept_int, (1 - y_intercept_frac) * value)
+                self.draw_point(x, y_intercept_int + 1, y_intercept_frac * value)
             y_intercept += gradient
 
     def draw_line_gupta_sproll(self, x1: float, y1: float, x2: float, y2: float) -> None:
@@ -128,3 +135,37 @@ class ImgArr():
 
     def save(self, filename: str, **kwargs) -> None:
         cv2.imwrite(filename, self.normalized(**kwargs))
+
+
+class AnimVidArr(ImgArr):
+    def __init__(self, filepath: str, width: int, height: int, fps: float = 30, color: bool = False) -> None:
+        super().__init__(width, height)
+        self.filepath = filepath
+
+        self.writer = cv2.VideoWriter(filepath, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height), color)
+
+    def write_normalized(self, dtype: np.dtype = np.uint8, gamma: float = 1, clip: float | None = None) -> None:
+        self.writer.write(self.normalized(dtype, gamma, clip))
+
+    def save(self) -> None:
+        self.writer.release()
+
+
+class HeatVidArr:
+    def __init__(self, filepath: str, frames_count: int, x_range: FloatRange, y_range: FloatRange, width: int = 20, height: int = 20, fps: float = 30) -> None:
+        self.filepath = filepath
+        self.frames_count = frames_count
+        self.x_range = x_range
+        self.y_range = y_range
+        self.width = width
+        self.height = height
+        self.fps = fps
+
+        self.arrays = np.zeros((frames_count, self.height, self.width))
+
+    def add_point(self, frame: int, x: float, y: float) -> None:
+        i = int(linmap(x, self.x_range, (0, self.width)))
+        j = int(linmap(y, self.y_range, (self.height, 0)))
+
+        if 0 <= i < self.width and 0 <= j < self.height:
+            self.arrays[frame, i, j] += 1

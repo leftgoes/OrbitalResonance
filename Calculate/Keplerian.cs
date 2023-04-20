@@ -23,7 +23,7 @@
         }
 
         // https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
-        public (Vector3D pos, Vector3D vel) ToCartesian()
+        public Body3D ToCartesian()
         {
             double mu = Constants.G * starMass;
         
@@ -42,7 +42,7 @@
                                oVel.x * (Math.Cos(argumentPeriapsis) * Math.Sin(longitudeAscending) + Math.Sin(argumentPeriapsis) * Math.Cos(inclination) * Math.Cos(longitudeAscending)) + oVel.y * (Math.Cos(argumentPeriapsis) * Math.Cos(inclination) * Math.Cos(longitudeAscending) - Math.Sin(argumentPeriapsis) * Math.Sin(longitudeAscending)),
                                oVel.x * Math.Sin(argumentPeriapsis) * Math.Sin(inclination) + oVel.y * Math.Cos(argumentPeriapsis) * Math.Sin(inclination));
 
-            return (pos, vel);
+            return new(pos, vel);
         }
 
         public static Keplerian FromCartesian(double starMass, Vector3D pos, Vector3D vel)
@@ -79,6 +79,24 @@
             if (Vector3D.Dot(pos, vel) < 0) trueAnormaly = 2 * Math.PI - trueAnormaly;
 
             return new(starMass, semiMajorAxis, eccentricity, inclination, longitudeAscending, argumentPeriapsis, trueAnormaly);
+        }
+
+        public static Keplerian BasicFromCartesian(double starMass, Vector3D pos, Vector3D vel)
+        {
+            double mu = Constants.G * starMass;
+            Vector3D angMomentum = Vector3D.Cross(pos, vel);
+
+            double eccentricity = (((vel.Magnitude * vel.Magnitude - mu / pos.Magnitude) * pos - Vector3D.Dot(pos, vel) * vel) / mu).Magnitude;
+
+            double semiMajorAxis;
+            if (Math.Abs(eccentricity - 1.0) > double.Epsilon)
+                semiMajorAxis = -mu / (vel.Magnitude * vel.Magnitude - 2 * mu / pos.Magnitude);
+            else
+                semiMajorAxis = double.PositiveInfinity;
+
+            double inclination = Math.Acos(angMomentum.z / angMomentum.Magnitude);
+
+            return new(starMass, semiMajorAxis, eccentricity, inclination, 0, 0, 0);
         }
 
         public static Keplerian Zero(double starMass) { return new(starMass, 0, 0, 0, 0, 0, 0); }
