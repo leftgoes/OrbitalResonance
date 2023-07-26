@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from matplotlib import cm
 
 FloatRange = tuple[float, float]
 
@@ -17,12 +18,13 @@ def fpart(x):
     return x % 1
 
 
-class ImgArr():
+class Array:
     def __init__(self, width: int, height: int) -> None:
         self._width = width
         self._height = height
-        self.arr = np.zeros((height, width))
-    
+
+        self.arr: np.ndarray = np.zeros((height, width))
+
     @property
     def width(self) -> int:
         return self._width
@@ -31,17 +33,25 @@ class ImgArr():
     def height(self) -> int:
         return self._height
 
+    def normalized(self, dtype: np.dtype = np.uint8, gamma: float = 1, clip: float | None = None) -> np.ndarray:
+        if self.arr.max() == 0:
+            return self.arr
+        arr = np.clip(self.arr, 0, clip)/clip if clip else self.arr/self.arr.max()
+        if dtype is np.float_:
+            return arr**gamma
+        else:
+            return dtype(np.iinfo(dtype).max * arr**gamma)
+
+
+class ImgArr(Array):
+    def __init__(self, width: int, height: int) -> None:
+        super().__init__(width, height)
+
     def multiply(self, factor: float) -> None:
         self.arr *= factor
     
     def reset(self) -> None:
         self.arr = np.zeros((self.height, self.width))
-
-    def normalized(self, dtype: np.dtype = np.uint8, gamma: float = 1, clip: float | None = None) -> np.ndarray:
-        if self.arr.max() == 0:
-            return self.arr
-        arr = np.clip(self.arr, 0, clip)/clip if clip else self.arr/self.arr.max()
-        return dtype(np.iinfo(dtype).max * arr**gamma)
 
     def draw_point(self, x: int, y: int, value: float) -> None:
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -151,21 +161,31 @@ class AnimVidArr(ImgArr):
         self.writer.release()
 
 
-class HeatVidArr:
-    def __init__(self, filepath: str, frames_count: int, x_range: FloatRange, y_range: FloatRange, width: int = 20, height: int = 20, fps: float = 30) -> None:
-        self.filepath = filepath
+class HeatVidArr(Array):
+    def __init__(self, frames_count: int, x_range: FloatRange, y_range: FloatRange, width: int = 20, height: int = 20) -> None:
+        super().__init__(width, height)
+        
         self.frames_count = frames_count
         self.x_range = x_range
         self.y_range = y_range
-        self.width = width
-        self.height = height
-        self.fps = fps
 
-        self.arrays = np.zeros((frames_count, self.height, self.width))
+        self.arr = np.zeros((frames_count, self.height, self.width))
 
-    def add_point(self, frame: int, x: float, y: float) -> None:
+    def add_point(self, frame_index: int, x: float, y: float) -> None:
         i = int(linmap(x, self.x_range, (0, self.width)))
         j = int(linmap(y, self.y_range, (self.height, 0)))
 
         if 0 <= i < self.width and 0 <= j < self.height:
-            self.arrays[frame, i, j] += 1
+            self.arr[frame_index, j, i] += 1
+
+        return i, j
+
+    def save(self, filepath: str, fps: float = 30, cmap: str = 'inferno', dtype: np.dtype = np.uint8, gamma: float = 1, clip: float | None = None) -> None:
+        writer = cv2.VideoWriter(filepath, cv2.VideoWriter_fourcc(*'mp4v'), fps, (self.width, self.height), True)
+        colormap = cm.get_cmap(cmap)
+        print(self.arr.max())
+        for frame in self.normalized(np.float_, gamma, clip):
+            colored = dtype(np.iinfo(dtype).max * colormap(frame)[:,:,:3][:,:,::-1])
+            writer.write(colored)
+
+        writer.release()

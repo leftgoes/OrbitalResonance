@@ -1,6 +1,6 @@
-﻿using Newtonsoft.Json;
-using System.Numerics;
-using System.Xml.Linq;
+﻿using Calculate;
+using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace OrbitalResonance
 {
@@ -52,6 +52,23 @@ namespace OrbitalResonance
             particles[step, index, 0] = keplerian.semiMajorAxis;
             particles[step, index, 1] = keplerian.eccentricity;
             particles[step, index, 2] = keplerian.inclination;
+        }
+
+        private DoubleRange GetRange(int index)
+        {
+
+        }
+
+        public VideoArray ToVideoArray(int width, int height)
+        {
+            VideoArray videoArr = new(steps, new(), new(), width, height);
+            for (int step = 0; step < steps; step++)
+            {
+                for (int particleIndex = 0; particleIndex < particles.Length; particleIndex++)
+                {
+                    videoArr.AddPoint();
+                }
+            }
         }
     }
 
@@ -227,25 +244,32 @@ namespace OrbitalResonance
             File.WriteAllText(filename, jsonString);
         }
 
-        public void SimulateKeplerian(string filename, int steps = 1000, double dt = 86400, int every = 1)
+        public void SimulateKeplerian(string filename, int steps = 1000, double dt = 86400, int substeps = 1)
         {
-            KeplerianData kData = new(steps / every, planets.Length, particles.Length);
+            Stopwatch timer = new();
+            timer.Start();
+
+            KeplerianData kData = new(steps, planets.Length, particles.Length);
             for (int step = 0; step < steps; step++)
             {
-                NextStep(dt);
-                if (step % every != 0) continue;
+                for (int i = 0; i < substeps; i++)
+                    NextStep(dt);
 
                 for (int i = 0; i < planets.Length; i++)
                 {
                     Keplerian keplerian = Keplerian.BasicFromCartesian(mainStar.mass, planets[i].pos - mainStar.pos, planets[i].vel - mainStar.vel);
-                    kData.AddPlanet(step / every, i, keplerian);
+                    kData.AddPlanet(step, i, keplerian);
                 }
 
                 for (int i = 0; i < particles.Length; i++)
                 {
                     Keplerian keplerian = Keplerian.BasicFromCartesian(mainStar.mass, particles[i].pos - mainStar.pos, particles[i].vel - mainStar.vel);
-                    kData.AddParticle(step / every, i, keplerian);
+                    kData.AddParticle(step, i, keplerian);
                 }
+
+                long RemainingSeconds = (steps / (step + 1) - 1) * timer.ElapsedMilliseconds / 1000;
+
+                Console.Write($"\r{step}/{steps}, " + RemainingSeconds.ToString() + " seconds remaining");
             }
 
             string jsonString = JsonConvert.SerializeObject(kData);
