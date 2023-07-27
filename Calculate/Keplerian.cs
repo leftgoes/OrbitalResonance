@@ -49,7 +49,7 @@
         {
             double mu = Constants.G * starMass;
             Vector3D angMomentum = Vector3D.Cross(pos, vel);
-            Vector3D nodeVector = Vector3D.Cross(new Vector3D(0, 0, 1), vel);
+            Vector3D nodeVector = Vector3D.Cross(Vector3D.ZUnit, vel);
 
             Vector3D eccentricityVector = ((vel.Magnitude * vel.Magnitude - mu / pos.Magnitude) * pos - Vector3D.Dot(pos, vel) * vel) / mu;
             double eccentricity = eccentricityVector.Magnitude;

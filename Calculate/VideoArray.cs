@@ -8,6 +8,13 @@ namespace Calculate
     {
         public readonly double min;
         public readonly double max;
+
+        public DoubleRange()
+        {
+            this.min = 0;
+            this.max = 1;
+        }
+
         public DoubleRange(double min, double max)
         {
             this.min = min;
@@ -35,20 +42,34 @@ namespace Calculate
 
         public int stride { get { return (width % 4 == 0) ? width : width + 4 - width % 4; } }
 
-        private int LinMap(double x, double f1, double f2, int t1, int t2)
+        private double LinMap(double x, double f1, double f2, double t1, double t2)
         {
             return (int)((t1 - t2) * (x - f1) / (f2 - f1) + t1);
         }
 
-        public void AddPoint(int frame, double x, double y)
+        private void AddPointInt(int frame, int i, int j, double value)
         {
-            int i = LinMap(x, xRange.min, xRange.max, 0, width);
-            int j = LinMap(y, yRange.min, yRange.max, height, 0);
+            if (i < 0 || i >= width || j < 0 || j >= height)
+                return;
 
-            if (0 <= i && i < width && 0 <= j && j < height)
-            {
-                array[frame, j, i]++;
-            }
+            Console.WriteLine("Once");
+            array[frame, j, i] += value;
+        }
+
+        public void AddPoint(int frame, double x, double y, double value = 1)
+        {
+            double i = LinMap(x, xRange.min, xRange.max, 0, width);
+            double j = LinMap(y, yRange.min, yRange.max, height, 0);
+
+            int iInt = (int)i;
+            int jInt = (int)j;
+            double iFrac = i - iInt;
+            double jFrac = j - jInt;
+            
+            AddPointInt(frame, iInt, jInt, (1 - iFrac) * (1 - jFrac) * value);
+            AddPointInt(frame, iInt, jInt + 1, (1 - iFrac) * jFrac * value);
+            AddPointInt(frame, iInt + 1, jInt, iFrac * (1 - jFrac) * value);
+            AddPointInt(frame, iInt + 1, jInt + 1, iFrac * jFrac * value);
         }
 
         public byte[] ToByteArray(int frame)
@@ -59,7 +80,7 @@ namespace Calculate
             {
                 for (int x = 0; x < width; x++)
                 {
-                    bytes[y * stride + x] = (byte)(255 * array[frame, y, x] / arrayMax);
+                    bytes[y * stride + x] = (byte)Math.Round(255 * array[frame, y, x] / arrayMax);
                 }
             }
 
@@ -84,7 +105,18 @@ namespace Calculate
         public void SaveFrame(string filename, int frame)
         {
             Bitmap bmp = ToBitmap(frame);
-            bmp.Save(filename);
+            bmp.Save(filename, ImageFormat.Png);
+        }
+
+        public void SaveFrames(string directory)
+        {
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
+            for (int frame = 0; frame < frames; frame++)
+            {
+                SaveFrame(Path.Join(directory, $"frm{frame:05d}.png"), frame);
+            }
         }
     }
 }

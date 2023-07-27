@@ -56,6 +56,8 @@
 
         public static Vector3D Zero { get { return new(0, 0, 0); } }
 
+        public static Vector3D ZUnit { get { return new(0, 0, 1); } }
+
         public double Magnitude { get { return Math.Sqrt(x * x + y * y + z * z); } }
 
         public Vector3D Normalized { get { return this / Magnitude; } }

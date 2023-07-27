@@ -37,38 +37,74 @@ namespace OrbitalResonance
 
     public class KeplerianData : CartesianData
     {
-        public KeplerianData(int steps, int planetsCount, int particlesCount) : base(steps, planetsCount, particlesCount)
+        bool nonescaping;
+
+        public KeplerianData(int steps, int planetsCount, int particlesCount, bool nonescaping) : base(steps, planetsCount, particlesCount)
         {
+            this.nonescaping = nonescaping;
         }
 
-        public void AddPlanet(int step, int index, Keplerian keplerian)
+        public void AddPlanet(int step, int planetIndex, Keplerian keplerian)
         {
-            planets[step, index, 0] = keplerian.semiMajorAxis;
-            planets[step, index, 1] = keplerian.eccentricity;
-            planets[step, index, 2] = keplerian.inclination;
+            planets[step, planetIndex, 0] = keplerian.semiMajorAxis;
+            planets[step, planetIndex, 1] = keplerian.eccentricity;
+            planets[step, planetIndex, 2] = keplerian.inclination;
         }
-        public void AddParticle(int step, int index, Keplerian keplerian)
+        public void AddParticle(int step, int particleIndex, Keplerian keplerian)
         {
-            particles[step, index, 0] = keplerian.semiMajorAxis;
-            particles[step, index, 1] = keplerian.eccentricity;
-            particles[step, index, 2] = keplerian.inclination;
-        }
-
-        private DoubleRange GetRange(int index)
-        {
-
+            particles[step, particleIndex, 0] = keplerian.semiMajorAxis;
+            particles[step, particleIndex, 1] = keplerian.eccentricity;
+            particles[step, particleIndex, 2] = keplerian.inclination;
         }
 
-        public VideoArray ToVideoArray(int width, int height)
+        private double ParticlesPercentile(double percentile, int keplerianIndex)
         {
-            VideoArray videoArr = new(steps, new(), new(), width, height);
-            for (int step = 0; step < steps; step++)
-            {
-                for (int particleIndex = 0; particleIndex < particles.Length; particleIndex++)
-                {
-                    videoArr.AddPoint();
+            int length = 0;
+
+            for (int i = 0; i < steps; i++) {
+                for (int j = 0; j < particlesCount; j++) {
+                    if (nonescaping && particles[i, j, 1] > 1)
+                        continue;
+                    length++;
                 }
             }
+
+            double[] flattened = new double[steps * particlesCount];
+
+            int flattenedIndex = 0;
+            for (int i = 0; i < steps; i++) {
+                for (int j = 0; j < particlesCount; j++) {
+                    if (nonescaping && particles[i, j, 1] > 1)
+                        continue;
+                    flattened[flattenedIndex++] = particles[i, j, keplerianIndex];
+                }
+            }
+            Array.Sort(flattened);
+
+            double percentileIndex = percentile / 100 * length;
+
+            int percentileIndexInt = (int)percentileIndex;
+            double t = percentileIndex - percentileIndexInt;
+
+            return (1 - t) * flattened[percentileIndexInt] + t * flattened[percentileIndexInt + 1];
+        }
+
+        public VideoArray ToVideoArray(int width, int height, int xIndex, int yIndex, double percentile = 5)
+        {
+            DoubleRange xRange = new(ParticlesPercentile(percentile, xIndex), ParticlesPercentile(100.0 - percentile, xIndex));
+            DoubleRange yRange = new(ParticlesPercentile(percentile, yIndex), ParticlesPercentile(100.0 - percentile, yIndex));
+
+            Console.WriteLine($"{xRange.min}, {xRange.max}, {yRange.min}, {yRange.max}");
+
+            VideoArray videoArr = new(steps, xRange, yRange, width, height);
+            for (int step = 0; step < steps; step++)
+            {
+                for (int particleIndex = 0; particleIndex < particlesCount; particleIndex++)
+                {
+                    videoArr.AddPoint(step, particles[step, particleIndex, xIndex], particles[step, particleIndex, yIndex]);
+                }
+            }
+            return videoArr;
         }
     }
 
@@ -79,17 +115,24 @@ namespace OrbitalResonance
         Attracting[] planets;
         NonAttracting[] particles;
 
-        public StarSystem(double starMass, Attracting[] planets, int particlesCount)
+        CartesianData cData;
+        KeplerianData kData;
+
+        public StarSystem(double starMass, Attracting[] planets)
         {
             this.planets = planets;
             mainStar = new(starMass);
-            particles = new NonAttracting[particlesCount];
+        }
+
+        public StarSystem(double starMass, Attracting planet)
+        {
+            planets = new Attracting[1] {planet};
+            mainStar = new(starMass);
         }
 
         public void AddParticles(int count)
         {
             Random random = new();
-
             var planetsDistribution = PlanetsKeplerianDistribution();
 
             particles = new NonAttracting[count];
@@ -189,7 +232,7 @@ namespace OrbitalResonance
 
             return accelerations;
         }
-
+            
         private void UpdatePositions(double dt, Vector3D mainStarAcc, Vector3D[] planetsAcc, Vector3D[] particlesAcc)
         {
             mainStar.pos += dt * (mainStar.vel + dt * mainStarAcc / 2);
@@ -227,7 +270,7 @@ namespace OrbitalResonance
 
         public void SimulateCartesian(string filename, int steps = 1000, double dt = 86400, int substeps = 1)
         {
-            CartesianData cData = new(steps, planets.Length, particles.Length);
+            cData = new(steps, planets.Length, particles.Length);
             for (int step = 0; step < steps; step++)
             {
                 for (int i = 0; i < substeps; i++)
@@ -239,17 +282,14 @@ namespace OrbitalResonance
                 for (int i = 0; i < particles.Length; i++)
                     cData.AddParticle(step, i, particles[i].pos - mainStar.pos);
             }
-
-            string jsonString = JsonConvert.SerializeObject(cData);
-            File.WriteAllText(filename, jsonString);
         }
 
-        public void SimulateKeplerian(string filename, int steps = 1000, double dt = 86400, int substeps = 1)
+        public void SimulateKeplerian(int steps = 1000, double dt = 86400, int substeps = 1)
         {
             Stopwatch timer = new();
             timer.Start();
 
-            KeplerianData kData = new(steps, planets.Length, particles.Length);
+            kData = new(steps, planets.Length, particles.Length, true);
             for (int step = 0; step < steps; step++)
             {
                 for (int i = 0; i < substeps; i++)
@@ -267,13 +307,29 @@ namespace OrbitalResonance
                     kData.AddParticle(step, i, keplerian);
                 }
 
-                long RemainingSeconds = (steps / (step + 1) - 1) * timer.ElapsedMilliseconds / 1000;
+                long remainingSeconds = (steps / (step + 1) - 1) * timer.ElapsedMilliseconds / 1000;
 
-                Console.Write($"\r{step}/{steps}, " + RemainingSeconds.ToString() + " seconds remaining");
+                Console.Write($"\r{step}/{steps}, " + remainingSeconds.ToString() + " seconds remaining");
             }
+        }
 
+        public void SerializeCartesian(string filename)
+        {
+            string jsonString = JsonConvert.SerializeObject(cData);
+            File.WriteAllText(filename, jsonString);
+        }
+
+        public void SerializeKeplerian(string filename)
+        {
             string jsonString = JsonConvert.SerializeObject(kData);
             File.WriteAllText(filename, jsonString);
+        }
+
+        public void VideoframesKeplerian(string directory, int width = 512, int height = 512, int xIndex = 0, int yIndex = 1)
+        {
+            VideoArray vidarr = kData.ToVideoArray(width, height, xIndex, yIndex);
+            Console.WriteLine(vidarr.array.Cast<double>().Max());
+            vidarr.SaveFrames(directory);
         }
     }
 }

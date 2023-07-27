@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from matplotlib import cm
+from typing import Callable
 
 FloatRange = tuple[float, float]
 
@@ -19,9 +20,10 @@ def fpart(x):
 
 
 class Array:
-    def __init__(self, width: int, height: int) -> None:
+    def __init__(self, width: int, height: int, scale_factor: int) -> None:
         self._width = width
         self._height = height
+        self.scale_factor = max(1, scale_factor)
 
         self.arr: np.ndarray = np.zeros((height, width))
 
@@ -37,10 +39,12 @@ class Array:
         if self.arr.max() == 0:
             return self.arr
         arr = np.clip(self.arr, 0, clip)/clip if clip else self.arr/self.arr.max()
-        if dtype is np.float_:
-            return arr**gamma
+        arr_converted = arr**gamma if dtype is np.float_ else dtype(np.iinfo(dtype).max * arr**gamma)
+
+        if self.scale_factor == 1:
+            return arr_converted
         else:
-            return dtype(np.iinfo(dtype).max * arr**gamma)
+            return np.kron(arr_converted, np.ones((self.scale_factor, self.scale_factor), dtype=arr_converted.dtype))
 
 
 class ImgArr(Array):
@@ -162,14 +166,14 @@ class AnimVidArr(ImgArr):
 
 
 class HeatVidArr(Array):
-    def __init__(self, frames_count: int, x_range: FloatRange, y_range: FloatRange, width: int = 20, height: int = 20) -> None:
-        super().__init__(width, height)
+    def __init__(self, frames_count: int, x_range: FloatRange, y_range: FloatRange, width: int = 20, height: int = 20, scale_factor: int = 1) -> None:
+        super().__init__(width, height, scale_factor)
         
         self.frames_count = frames_count
         self.x_range = x_range
         self.y_range = y_range
 
-        self.arr = np.zeros((frames_count, self.height, self.width))
+        self.arr = np.zeros((frames_count, height, width))
 
     def add_point(self, frame_index: int, x: float, y: float) -> None:
         i = int(linmap(x, self.x_range, (0, self.width)))
@@ -181,11 +185,21 @@ class HeatVidArr(Array):
         return i, j
 
     def save(self, filepath: str, fps: float = 30, cmap: str = 'inferno', dtype: np.dtype = np.uint8, gamma: float = 1, clip: float | None = None) -> None:
-        writer = cv2.VideoWriter(filepath, cv2.VideoWriter_fourcc(*'mp4v'), fps, (self.width, self.height), True)
+        writer = cv2.VideoWriter(filepath, cv2.VideoWriter_fourcc(*'mp4v'), fps, (self.scale_factor * self.width, self.scale_factor * self.height), True)
         colormap = cm.get_cmap(cmap)
-        print(self.arr.max())
+
         for frame in self.normalized(np.float_, gamma, clip):
             colored = dtype(np.iinfo(dtype).max * colormap(frame)[:,:,:3][:,:,::-1])
             writer.write(colored)
 
         writer.release()
+    
+    def save_frames(self, filepaths: Callable[[int], str] | None = None, cmap: str = 'inferno', dtype: np.dtype = np.uint8, gamma: float = 1, clip: float | None = None) -> None:
+        if not filepaths:
+            filepaths = lambda i: f'frm{i:04d}.png'
+        
+        colormap = cm.get_cmap(cmap)
+
+        for i, frame in enumerate(self.normalized(np.float_, gamma, clip)):
+            colored = dtype(np.iinfo(dtype).max * colormap(frame)[:,:,:3][:,:,::-1])
+            cv2.imwrite(filepaths(i), colored)
